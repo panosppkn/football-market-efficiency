@@ -13,3 +13,5 @@ reports/*.png
 reports/*.svg
 !reports/.gitkeep
 
+
+*.egg-info/
