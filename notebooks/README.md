@@ -8,7 +8,7 @@ Recommended reading order:
 
 1. `01_main_pooled_l2_100_edge_analysis.ipynb`
    - Main selected-model analysis.
-   - Uses one pooled all-league logistic model.
+   - Uses one pooled all-league market-anchored logistic model.
    - Trains on the previous two seasons before each test season.
    - Uses the strongest ridge setting from notebook 02 (`L2 = 100`).
 
@@ -24,7 +24,7 @@ Recommended reading order:
 
 4. `04_league_specific_baseline.ipynb`
    - Baseline and research-evolution notebook.
-   - Fits separate league-level models.
+   - Fits separate league-level market-anchored models.
    - Kept to document why the project moved toward pooled seasonal modeling.
 
 5. `05_consensus_kelly_staking.ipynb`

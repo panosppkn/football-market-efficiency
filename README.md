@@ -1,8 +1,9 @@
-# Football Over/Under Market Edge Research
+# Football Over/Under Market Efficiency Research
 
-A reproducible quantitative research project testing whether simple football
-team-form features add useful information beyond bookmaker prices in European
-over/under 2.5-goal markets.
+A reproducible quantitative research project testing whether simple team
+scoring-form variables contain incremental probability information after
+conditioning on no-vig bookmaker consensus odds in European over/under
+2.5-goal markets.
 
 The project is framed as a research prototype, not as betting advice or a
 production trading system. Its main value is the disciplined research workflow:
@@ -19,8 +20,8 @@ after market margin and execution constraints.
 
 This repository investigates four questions:
 
-1. Do recent team scoring-form features improve over/under 2.5 probability
-   forecasts relative to market-implied probabilities?
+1. After conditioning on no-vig market probability, do recent team
+   scoring-form variables add stable incremental information?
 2. Does pooling multiple leagues into one regularized model improve stability
    compared with fitting separate league-level models?
 3. When the model estimates positive expected value, do selected bets generate
@@ -73,19 +74,22 @@ For each match, the model uses information available before the fixture:
 Team-form features are shifted by one match, so the current match result cannot
 enter its own predictors. Feature histories restart within each league-season.
 
-### Probability model
+### Market-anchored probability model
 
 The core model is an L2-regularized logistic regression implemented in
-`src/football_edge/model.py`. Predictors are standardized using training data
-only, and model convergence is checked.
+`src/football_edge/model.py`. It is a **market-anchored probability model**,
+not a fundamentals-only football model: no-vig consensus market log-odds form
+the primary anchor, while team-form variables estimate conditional adjustments
+to that anchor. Predictors are standardized using training data only, and model
+convergence is checked.
 
 The research evolved through two model designs:
 
-1. **League-specific baseline**: separate walk-forward models are trained for
-   each league. This is useful as a benchmark, but it has small-sample and
+1. **League-specific market-anchored baseline**: separate walk-forward models
+   are trained for each league. This is useful as a benchmark, but it has small-sample and
    coefficient-stability issues.
-2. **Pooled seasonal model**: one unified model is trained across all leagues
-   using exactly the previous two seasons before each test season. League
+2. **Pooled market-anchored model**: one unified model is trained across all
+   leagues using exactly the previous two seasons before each test season. League
    indicators allow different league baselines while sharing market and form
    slopes. This is the main modeling direction.
 
@@ -111,6 +115,11 @@ The strategy is expressed in expected-value terms:
 ```text
 EV = model_probability * decimal_odds - 1
 ```
+
+Here, `model_probability` is a market-adjusted estimate. The economic test asks
+whether its conditional adjustments identify execution prices that are
+mispriced relative to the market anchor; it does not compare an independent
+fundamentals forecast with unrelated bookmaker prices.
 
 A flat one-unit over-2.5 bet is selected only when:
 
@@ -171,7 +180,10 @@ backtest.
 
 The main empirical result is cautious:
 
-- The market-implied probability is very hard to beat.
+- The market-implied probability is the dominant forecasting signal and is
+  very hard to beat.
+- The simple scoring-form variables do not demonstrate stable incremental value
+  after conditioning on the market anchor.
 - The first league-specific approach is unstable and does not show a reliable
   edge.
 - Pooling leagues and using stronger L2 regularization improves coefficient
@@ -200,6 +212,16 @@ closing-market maximum is shown only as a non-executable sensitivity.
 
 This section is deliberately explicit because these are exactly the issues a
 professional quantitative reviewer should care about.
+
+### Signal and execution-price dependence
+
+The no-vig market logit is constructed from average pre-closing odds, and the
+tested named-bookmaker or market-maximum prices may contribute to that same
+consensus. This is not target leakage because match outcomes are not used, but
+it means the probability signal and execution prices are not fully independent.
+Without constituent quotes, a leave-one-bookmaker-out consensus cannot be
+constructed. Results should therefore be interpreted as a market-relative
+pricing overlay rather than evidence from a standalone fundamentals model.
 
 ### Quote timing and executability
 
@@ -388,18 +410,17 @@ The most important extensions are:
 
 ## Conclusion
 
-The results suggest that football over/under prediction contains useful signal
-structure, but the bookmaker market already captures a large amount of that
-information. The pooled seasonal approach is more stable than separate
-league-level models and is the preferred direction for further research.
+The bookmaker consensus is the dominant probability signal in this sample. The
+pooled market-anchored model is more stable than separate league-level models,
+but the simple scoring-form variables do not demonstrate reliable incremental
+information after conditioning on that anchor.
 
-When combined with an expected-value filter, the framework shows promising
-characteristics in selected periods, but the evidence is not strong enough to
-claim a robust executable edge. Because exact odds timestamps are unavailable,
-the analysis should be interpreted as a quantitative research prototype. With
-timestamped odds, richer pre-match data, and live paper-trading validation, the
-framework could be extended into a more robust football betting research
-pipeline.
+Expected-value filters produce isolated positive periods, not a robust
+executable edge. The model should therefore be interpreted as a market-relative
+calibration and pricing overlay, not as a standalone fundamentals model.
+Timestamped constituent odds, a fitted market-only ablation, verified costs,
+and prospective paper trading are required before stronger economic claims can
+be made.
 
 ## Data source and license
 

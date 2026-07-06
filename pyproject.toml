@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "football-market-edge"
 version = "0.1.0"
-description = "Walk-forward research into statistical edges in European football over/under markets."
+description = "Walk-forward research on market-anchored probability models in European football over/under markets."
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
