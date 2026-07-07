@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from football_edge.backtest import (
     build_execution_candidates,
@@ -227,3 +228,78 @@ def test_pooled_walk_forward_accepts_custom_feature_columns() -> None:
     assert len(predictions) == 2
     assert predictions["model_probability"].between(0, 1).all()
     assert "custom_feature" in set(coefficients["coefficient"])
+
+
+
+def _monthly_recalibration_frame() -> pd.DataFrame:
+    dates = pd.date_range("2021-01-05", periods=30, freq="MS")
+    rows = []
+    for index, date in enumerate(dates):
+        for league_index, league in enumerate(["League A", "League B"]):
+            signal = -1.5 if (index + league_index) % 2 == 0 else 1.5
+            rows.append(
+                {
+                    "date": date + pd.Timedelta(days=league_index),
+                    "league": league,
+                    "season": f"{date.year}_{date.year + 1}",
+                    "market_logit": signal,
+                    "over_2_5": int(signal > 0),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def test_monthly_recalibration_walk_forward_uses_only_prior_matches() -> None:
+    from football_edge.backtest import run_pooled_monthly_recalibration_walk_forward
+
+    predictions, coefficients = run_pooled_monthly_recalibration_walk_forward(
+        _monthly_recalibration_frame(),
+        "12M",
+        l2=10.0,
+        model_name="12M",
+        feature_columns=["market_logit"],
+        min_training_matches=6,
+    )
+
+    assert not predictions.empty
+    assert (predictions["train_end_date"] < predictions["test_start_date"]).all()
+    assert predictions["model_probability"].between(0, 1).all()
+    assert "market_logit" in set(coefficients["coefficient"])
+
+
+def test_monthly_recalibration_window_lengths_and_all_history() -> None:
+    from football_edge.backtest import run_pooled_monthly_recalibration_walk_forward
+
+    frame = _monthly_recalibration_frame()
+    rolling, _ = run_pooled_monthly_recalibration_walk_forward(
+        frame,
+        "12M",
+        feature_columns=["market_logit"],
+        min_training_matches=6,
+    )
+    expanding, _ = run_pooled_monthly_recalibration_walk_forward(
+        frame,
+        "all_history",
+        feature_columns=["market_logit"],
+        min_training_matches=6,
+    )
+
+    rolling_months = rolling.drop_duplicates("recalibration_month")
+    rolling_span_days = (
+        rolling_months["test_start_date"] - rolling_months["train_start_date"]
+    ).dt.days
+    assert rolling_span_days.between(365, 367).all()
+    assert expanding["train_start_date"].isna().all()
+    assert expanding.groupby("recalibration_month")["training_matches"].first().is_monotonic_increasing
+
+
+def test_monthly_recalibration_rejects_invalid_window() -> None:
+    from football_edge.backtest import run_pooled_monthly_recalibration_walk_forward
+
+    with pytest.raises(ValueError):
+        run_pooled_monthly_recalibration_walk_forward(
+            _monthly_recalibration_frame(),
+            "36M",
+            feature_columns=["market_logit"],
+            min_training_matches=6,
+        )

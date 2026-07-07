@@ -308,6 +308,156 @@ def run_regularization_grid(
     return combined_predictions, combined_coefficients
 
 
+MONTHLY_RECALIBRATION_WINDOWS = {"12M", "18M", "24M", "all_history"}
+
+
+def run_pooled_monthly_recalibration_walk_forward(
+    all_matches: pd.DataFrame,
+    window: str,
+    *,
+    l2: float = 100.0,
+    model_name: str | None = None,
+    feature_columns: list[str] | None = None,
+    min_training_matches: int | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Fit one pooled model recalibrated at the start of each test month.
+
+    ``window`` must be one of ``12M``, ``18M``, ``24M``, or ``all_history``.
+    Rolling windows train on matches in ``[test_start - window, test_start)``;
+    the expanding window trains on all matches with ``date < test_start``.
+    League dummy variables are built once on the full model dataset, matching
+    the season-level pooled walk-forward implementation.
+    """
+    if window not in MONTHLY_RECALIBRATION_WINDOWS:
+        raise ValueError(
+            "window must be one of: " + ", ".join(sorted(MONTHLY_RECALIBRATION_WINDOWS))
+        )
+    if l2 < 0:
+        raise ValueError("l2 must be non-negative")
+
+    base_features = (
+        list(feature_columns) if feature_columns is not None else MODEL_FEATURES
+    )
+    if not base_features:
+        raise ValueError("feature_columns must contain at least one feature")
+
+    required = [*base_features, "over_2_5", "league", "season", "date"]
+    missing_columns = set(required).difference(all_matches.columns)
+    if missing_columns:
+        raise ValueError(
+            "Monthly recalibration data is missing columns: "
+            + ", ".join(sorted(missing_columns))
+        )
+
+    model_data = all_matches.dropna(subset=required).copy()
+    model_data["date"] = pd.to_datetime(model_data["date"], errors="raise")
+    model_data = model_data.sort_values("date", kind="stable").reset_index(drop=True)
+    league_dummies = pd.get_dummies(
+        model_data["league"], prefix="league", drop_first=True, dtype=float
+    )
+    league_features = list(league_dummies.columns)
+    model_data = pd.concat([model_data, league_dummies], axis=1)
+    model_feature_columns = [*base_features, *league_features]
+
+    if min_training_matches is None:
+        min_training_matches = max(100, 10 * len(model_feature_columns))
+    if min_training_matches < 1:
+        raise ValueError("min_training_matches must be positive")
+
+    first_available_month = model_data["date"].min().to_period("M").to_timestamp()
+    month_starts = pd.date_range(
+        first_available_month,
+        model_data["date"].max().to_period("M").to_timestamp(),
+        freq="MS",
+    )
+    model_label = model_name or f"monthly_{window}"
+
+    predictions = []
+    coefficient_rows = []
+    for test_start in month_starts:
+        test_end = test_start + pd.DateOffset(months=1)
+        test = model_data.loc[
+            model_data["date"].ge(test_start) & model_data["date"].lt(test_end)
+        ].copy()
+        if test.empty:
+            continue
+
+        if window == "all_history":
+            train_start = pd.NaT
+            train_mask = model_data["date"].lt(test_start)
+        else:
+            months = int(window.removesuffix("M"))
+            train_start = test_start - pd.DateOffset(months=months)
+            if train_start < first_available_month:
+                continue
+            train_mask = model_data["date"].ge(train_start) & model_data[
+                "date"
+            ].lt(test_start)
+        train = model_data.loc[train_mask]
+        if len(train) < min_training_matches:
+            continue
+
+        train_end_date = train["date"].max()
+        test_start_date = test["date"].min()
+        if train_end_date >= test_start_date:
+            raise ValueError(
+                f"Monthly recalibration overlap for {window} {test_start:%Y-%m}: "
+                f"training ends {train_end_date}, test starts {test_start_date}"
+            )
+
+        model = fit_logistic_regression(
+            train[model_feature_columns].to_numpy(),
+            train["over_2_5"].to_numpy(),
+            l2=l2,
+        )
+        test["model_probability"] = predict_probability(
+            model, test[model_feature_columns].to_numpy()
+        )
+        test["model_name"] = model_label
+        test["regularization_l2"] = l2
+        test["training_window"] = window
+        test["recalibration_month"] = test_start
+        test["training_matches"] = len(train)
+        test["test_matches"] = len(test)
+        test["train_start_date"] = train_start
+        test["train_end_date"] = train_end_date
+        test["test_start_date"] = test_start_date
+        test["test_end_date"] = test_end
+        test["model_iterations"] = model.iterations
+        predictions.append(test)
+
+        coefficient_names = ["intercept", *model_feature_columns]
+        coefficient_rows.extend(
+            {
+                "model_name": model_label,
+                "training_window": window,
+                "recalibration_month": test_start,
+                "training_matches": len(train),
+                "test_matches": len(test),
+                "regularization_l2": l2,
+                "coefficient": coefficient,
+                "value": value,
+            }
+            for coefficient, value in zip(coefficient_names, model.coefficients)
+        )
+
+    if not predictions:
+        raise ValueError(
+            "Monthly recalibration produced no predictions; reduce min_training_matches "
+            "or provide more historical data"
+        )
+
+    prediction_frame = (
+        pd.concat(predictions, ignore_index=True)
+        .sort_values(["recalibration_month", "league", "date"], kind="stable")
+        .reset_index(drop=True)
+    )
+    coefficient_frame = pd.DataFrame(coefficient_rows).sort_values(
+        ["recalibration_month", "coefficient"], kind="stable"
+    )
+    return prediction_frame, coefficient_frame.reset_index(drop=True)
+
+
 def probability_performance(
     predictions: pd.DataFrame,
     *,

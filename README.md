@@ -18,7 +18,7 @@ must therefore do more than predict match outcomes: it must estimate
 probabilities well enough to identify prices where expected value is positive
 after market margin and execution constraints.
 
-This repository investigates six questions:
+This repository investigates seven questions:
 
 1. After conditioning on no-vig market probability, do recent team
    scoring-form variables add stable incremental information?
@@ -32,6 +32,8 @@ This repository investigates six questions:
    strengthen or weaken the market-efficiency conclusion?
 6. Do simple attacking and defensive team-form features add incremental
    out-of-sample information beyond market-implied probabilities?
+7. Is the main two-season training-window assumption robust to monthly
+   recalibration with alternative rolling and expanding histories?
 
 ## Data
 
@@ -318,6 +320,7 @@ football-market-efficiency/
 |   |-- 05_consensus_kelly_staking.ipynb
 |   |-- 06_two_sided_market_efficiency.ipynb
 |   |-- 07_feature_incremental_value.ipynb
+|   |-- 08_monthly_recalibration_window_robustness.ipynb
 |   `-- README.md
 |-- reports/                    # generated artifacts, kept out of git
 |-- src/football_edge/
@@ -347,6 +350,7 @@ Start with notebook 01 if you want the main result.
 | `05_consensus_kelly_staking.ipynb` | Independent market-consensus benchmark with flat-stake and capped fractional-Kelly diagnostics. |
 | `06_two_sided_market_efficiency.ipynb` | Exploratory Over/Under symmetry test for the selected market-anchored model. |
 | `07_feature_incremental_value.ipynb` | Incremental-value test for simple football-form features versus the market-only benchmark. |
+| `08_monthly_recalibration_window_robustness.ipynb` | Monthly recalibration robustness test for the selected two-season training-window assumption. |
 
 Reusable research logic lives in `src/football_edge/`; notebooks are intended
 for presentation and interpretation rather than duplicated implementation.
@@ -391,6 +395,7 @@ jupyter notebook notebooks/04_league_specific_baseline.ipynb
 jupyter notebook notebooks/05_consensus_kelly_staking.ipynb
 jupyter notebook notebooks/06_two_sided_market_efficiency.ipynb
 jupyter notebook notebooks/07_feature_incremental_value.ipynb
+jupyter notebook notebooks/08_monthly_recalibration_window_robustness.ipynb
 ```
 
 Each notebook rebuilds its own data, features, predictions, and backtest
@@ -405,8 +410,8 @@ outputs from the raw CSV files.
   fixed random seed `42`. Data loading, feature engineering, logistic-model
   fitting, walk-forward splits, bet settlement, and Kelly simulations are
   otherwise deterministic for identical input files and dependency versions.
-- Expected runtime: approximately 30-120 seconds per notebook and 4-12 minutes
-  for all seven notebooks on a typical modern laptop. Runtime depends on CPU,
+- Expected runtime: approximately 30-120 seconds per notebook and 5-15 minutes
+  for all eight notebooks on a typical modern laptop. Runtime depends on CPU,
   storage, plotting backend, and the number of bootstrap replications.
 - Tests: run `pytest` from the repository root after installing
   `.[dev]`.

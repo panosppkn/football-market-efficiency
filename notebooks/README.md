@@ -59,3 +59,13 @@ results.
    - Reports chronological predictive deltas, coefficient stability, aggregate
      and seasonal ROI/CLV, bet-count diagnostics, league concentration checks,
      and regularization sensitivity.
+
+8. `08_monthly_recalibration_window_robustness.ipynb`
+   - Robustness experiment testing whether the selected two-season training
+     window is sensitive to the amount of history used for model fitting.
+   - Compares monthly recalibration with rolling 12M, 18M, 24M, and expanding
+     all-history windows while keeping features, L2, EV threshold, and
+     execution logic fixed.
+   - Reports predictive diagnostics, coefficient stability, economic metrics,
+     monthly stability, season/league robustness, and a compact final
+     comparison table.
