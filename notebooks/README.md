@@ -42,3 +42,11 @@ The notebooks intentionally keep conclusions cautious. The dataset does not
 contain reliable exact quote timestamps, so the backtests should be interpreted
 as historical research diagnostics rather than production-ready betting
 results.
+
+
+6. `06_two_sided_market_efficiency.ipynb`
+   - Exploratory extension of the selected pooled market-anchored model.
+   - Evaluates Over-only, Under-only, and higher-EV-side selection using the
+     same 3% model threshold and walk-forward folds.
+   - Reports side-specific ROI, CLV, bet counts, quote conflicts, cumulative
+     profit, and seasonal stability.

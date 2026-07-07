@@ -16,6 +16,12 @@ from football_edge.backtest import (
 )
 from football_edge.data import discover_datasets, load_matches
 from football_edge.features import create_goal_features
+from football_edge.two_sided import (
+    build_two_sided_candidates,
+    select_two_sided_bets,
+    summarize_two_sided_bets,
+)
+
 from football_edge.staking import (
     build_consensus_candidates,
     cluster_bootstrap_roi,
@@ -26,6 +32,9 @@ from football_edge.staking import (
 
 __all__ = [
     "create_goal_features",
+    "summarize_two_sided_bets",
+    "select_two_sided_bets",
+    "build_two_sided_candidates",
     "build_consensus_candidates",
     "cluster_bootstrap_roi",
     "full_kelly_fraction",

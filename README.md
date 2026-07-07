@@ -18,7 +18,7 @@ must therefore do more than predict match outcomes: it must estimate
 probabilities well enough to identify prices where expected value is positive
 after market margin and execution constraints.
 
-This repository investigates four questions:
+This repository investigates five questions:
 
 1. After conditioning on no-vig market probability, do recent team
    scoring-form variables add stable incremental information?
@@ -28,6 +28,8 @@ This repository investigates four questions:
    credible out-of-sample ROI and closing-line value?
 4. Can a model-free market-consensus probability support stable fractional
    Kelly staking across named execution venues?
+5. Does extending the selected model symmetrically to Under 2.5 materially
+   strengthen or weaken the market-efficiency conclusion?
 
 ## Data
 
@@ -121,7 +123,7 @@ whether its conditional adjustments identify execution prices that are
 mispriced relative to the market anchor; it does not compare an independent
 fundamentals forecast with unrelated bookmaker prices.
 
-A flat one-unit over-2.5 bet is selected only when:
+In the main strategy notebook, a flat one-unit Over 2.5 bet is selected only when:
 
 ```text
 EV >= 3%
@@ -143,8 +145,11 @@ not a portfolio return on starting capital. The main pooled-model study uses
 flat stakes. Notebook 05 separately tests prespecified fractional Kelly rules
 using a model-free market-consensus probability; this is a bankroll-risk
 experiment, not evidence independent of the underlying probability signal.
-The project does not implement volatility targeting or portfolio optimization
-across simultaneous betting venues.
+Notebook 06 extends the selected market-anchored model to a two-sided robustness
+check: Over-only, Under-only, and higher-EV-side selection are evaluated with
+the same fixed threshold and walk-forward predictions. The project does not
+implement volatility targeting or portfolio optimization across simultaneous
+betting venues.
 
 ## Evaluation
 
@@ -190,6 +195,9 @@ The main empirical result is cautious:
   stability and calibration relative to weaker regularization settings.
 - The selected pooled model (`L2 = 100`, previous two seasons, all leagues)
   is more statistically stable than the initial league-specific baseline.
+- The two-sided Over/Under extension in notebook 06 is useful as a robustness
+  check, but it does not reveal a stronger tradable edge; Under-side positives
+  are weak after CLV, uncertainty, and seasonal stability are considered.
 - However, the tested specification still does not establish a robust,
   production-ready betting edge. ROI and CLV vary materially across execution
   source, season, and league.
@@ -303,6 +311,7 @@ football-market-efficiency/
 |   |-- 03_ev_bucket_diagnostics.ipynb
 |   |-- 04_league_specific_baseline.ipynb
 |   |-- 05_consensus_kelly_staking.ipynb
+|   |-- 06_two_sided_market_efficiency.ipynb
 |   `-- README.md
 |-- reports/                    # generated artifacts, kept out of git
 |-- src/football_edge/
@@ -312,6 +321,7 @@ football-market-efficiency/
 |   |-- model.py                # transparent logistic regression
 |   |-- backtest.py             # walk-forward evaluation and settlement
 |   |-- staking.py              # consensus signal and Kelly bankroll tests
+|   |-- two_sided.py            # Over/Under candidate and settlement logic
 |   `-- plotting.py             # reusable figures
 |-- tests/
 |-- pyproject.toml
@@ -329,6 +339,7 @@ Start with notebook 01 if you want the main result.
 | `03_ev_bucket_diagnostics.ipynb` | EV-bucket diagnostics for the selected pooled model. |
 | `04_league_specific_baseline.ipynb` | Baseline/research-evolution notebook using separate league-level models. |
 | `05_consensus_kelly_staking.ipynb` | Independent market-consensus benchmark with flat-stake and capped fractional-Kelly diagnostics. |
+| `06_two_sided_market_efficiency.ipynb` | Exploratory Over/Under symmetry test for the selected market-anchored model. |
 
 Reusable research logic lives in `src/football_edge/`; notebooks are intended
 for presentation and interpretation rather than duplicated implementation.
@@ -371,6 +382,7 @@ jupyter notebook notebooks/02_pooled_regularization_comparison.ipynb
 jupyter notebook notebooks/03_ev_bucket_diagnostics.ipynb
 jupyter notebook notebooks/04_league_specific_baseline.ipynb
 jupyter notebook notebooks/05_consensus_kelly_staking.ipynb
+jupyter notebook notebooks/06_two_sided_market_efficiency.ipynb
 ```
 
 Each notebook rebuilds its own data, features, predictions, and backtest
