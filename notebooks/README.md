@@ -50,3 +50,12 @@ results.
      same 3% model threshold and walk-forward folds.
    - Reports side-specific ROI, CLV, bet counts, quote conflicts, cumulative
      profit, and seasonal stability.
+
+7. `07_feature_incremental_value.ipynb`
+   - Incremental-value experiment testing whether simple football-form features
+     improve out-of-sample probabilities beyond the market-only benchmark.
+   - Compares market-only, football-form-only, current market-plus-attack, and
+     expanded market-plus-attack-plus-defense specifications on a common sample.
+   - Reports chronological predictive deltas, coefficient stability, aggregate
+     and seasonal ROI/CLV, bet-count diagnostics, league concentration checks,
+     and regularization sensitivity.

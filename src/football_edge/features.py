@@ -11,13 +11,13 @@ from football_edge.data import load_matches
 
 
 def _team_match_history(matches: pd.DataFrame) -> pd.DataFrame:
-    home = matches[["match_id", "date", "HomeTeam", "FTHG"]].rename(
-        columns={"HomeTeam": "team", "FTHG": "goals"}
+    home = matches[["match_id", "date", "HomeTeam", "FTHG", "FTAG"]].rename(
+        columns={"HomeTeam": "team", "FTHG": "goals", "FTAG": "goals_conceded"}
     )
     home["venue"] = "home"
 
-    away = matches[["match_id", "date", "AwayTeam", "FTAG"]].rename(
-        columns={"AwayTeam": "team", "FTAG": "goals"}
+    away = matches[["match_id", "date", "AwayTeam", "FTAG", "FTHG"]].rename(
+        columns={"AwayTeam": "team", "FTAG": "goals", "FTHG": "goals_conceded"}
     )
     away["venue"] = "away"
 
@@ -26,13 +26,19 @@ def _team_match_history(matches: pd.DataFrame) -> pd.DataFrame:
         .sort_values(["team", "date", "match_id"], kind="stable")
         .reset_index(drop=True)
     )
-    grouped_goals = history.groupby("team", sort=False)["goals"]
+    grouped = history.groupby("team", sort=False)
 
     # shift(1) makes every feature available before the current match.
-    history["season_avg_goals"] = grouped_goals.transform(
+    history["season_avg_goals"] = grouped["goals"].transform(
         lambda goals: goals.shift(1).expanding().mean()
     )
-    history["last_5_avg_goals"] = grouped_goals.transform(
+    history["last_5_avg_goals"] = grouped["goals"].transform(
+        lambda goals: goals.shift(1).rolling(window=5, min_periods=1).mean()
+    )
+    history["season_avg_goals_conceded"] = grouped["goals_conceded"].transform(
+        lambda goals: goals.shift(1).expanding().mean()
+    )
+    history["last_5_goals_conceded"] = grouped["goals_conceded"].transform(
         lambda goals: goals.shift(1).rolling(window=5, min_periods=1).mean()
     )
     return history
@@ -49,13 +55,21 @@ def create_goal_features(path: str | Path) -> pd.DataFrame:
 
     history = _team_match_history(matches)
 
-    feature_columns = ["match_id", "season_avg_goals", "last_5_avg_goals"]
+    feature_columns = [
+        "match_id",
+        "season_avg_goals",
+        "last_5_avg_goals",
+        "season_avg_goals_conceded",
+        "last_5_goals_conceded",
+    ]
     home_features = history.loc[
         history["venue"].eq("home"), feature_columns
     ].rename(
         columns={
             "season_avg_goals": "home_season_avg_goals",
             "last_5_avg_goals": "home_last_5_avg_goals",
+            "season_avg_goals_conceded": "home_season_avg_goals_conceded",
+            "last_5_goals_conceded": "home_last_5_goals_conceded",
         }
     )
     away_features = history.loc[
@@ -64,6 +78,8 @@ def create_goal_features(path: str | Path) -> pd.DataFrame:
         columns={
             "season_avg_goals": "away_season_avg_goals",
             "last_5_avg_goals": "away_last_5_avg_goals",
+            "season_avg_goals_conceded": "away_season_avg_goals_conceded",
+            "last_5_goals_conceded": "away_last_5_goals_conceded",
         }
     )
 
@@ -96,6 +112,14 @@ def create_goal_features(path: str | Path) -> pd.DataFrame:
     )
     result["total_last_5_avg_goals"] = (
         result["home_last_5_avg_goals"] + result["away_last_5_avg_goals"]
+    )
+    result["total_season_avg_goals_conceded"] = (
+        result["home_season_avg_goals_conceded"]
+        + result["away_season_avg_goals_conceded"]
+    )
+    result["total_last_5_goals_conceded"] = (
+        result["home_last_5_goals_conceded"]
+        + result["away_last_5_goals_conceded"]
     )
     result["total_ft_goals"] = (
         result["home_ft_goals"] + result["away_ft_goals"]

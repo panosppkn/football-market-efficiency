@@ -1,5 +1,7 @@
 """Walk-forward prediction and flat-stake betting evaluation."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
 
 import numpy as np
@@ -170,6 +172,7 @@ def run_pooled_rolling_walk_forward(
     l2: float,
     model_name: str,
     training_window: int = 2,
+    feature_columns: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Fit one all-league model using exactly the previous N seasons.
 
@@ -181,14 +184,26 @@ def run_pooled_rolling_walk_forward(
     if l2 < 0:
         raise ValueError("l2 must be non-negative")
 
-    required = [*MODEL_FEATURES, "over_2_5", "league", "season", "date"]
+    base_features = (
+        list(feature_columns) if feature_columns is not None else MODEL_FEATURES
+    )
+    if not base_features:
+        raise ValueError("feature_columns must contain at least one feature")
+
+    required = [*base_features, "over_2_5", "league", "season", "date"]
+    missing_columns = set(required).difference(all_matches.columns)
+    if missing_columns:
+        raise ValueError(
+            "Pooled walk-forward data is missing columns: "
+            + ", ".join(sorted(missing_columns))
+        )
     model_data = all_matches.dropna(subset=required).copy()
     league_dummies = pd.get_dummies(
         model_data["league"], prefix="league", drop_first=True, dtype=float
     )
     league_features = list(league_dummies.columns)
     model_data = pd.concat([model_data, league_dummies], axis=1)
-    feature_columns = [*MODEL_FEATURES, *league_features]
+    model_feature_columns = [*base_features, *league_features]
 
     seasons = sorted(model_data["season"].unique())
     if len(seasons) <= training_window:
@@ -217,12 +232,12 @@ def run_pooled_rolling_walk_forward(
             )
 
         model = fit_logistic_regression(
-            train[feature_columns].to_numpy(),
+            train[model_feature_columns].to_numpy(),
             train["over_2_5"].to_numpy(),
             l2=l2,
         )
         test["model_probability"] = predict_probability(
-            model, test[feature_columns].to_numpy()
+            model, test[model_feature_columns].to_numpy()
         )
         test["model_name"] = model_name
         test["regularization_l2"] = l2
@@ -234,7 +249,7 @@ def run_pooled_rolling_walk_forward(
         test["model_iterations"] = model.iterations
         predictions.append(test)
 
-        coefficient_names = ["intercept", *feature_columns]
+        coefficient_names = ["intercept", *model_feature_columns]
         coefficient_rows.extend(
             {
                 "model_name": model_name,
@@ -269,6 +284,7 @@ def run_regularization_grid(
     configurations: dict[str, float],
     *,
     training_window: int = 2,
+    feature_columns: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run a fixed ridge grid on identical pooled rolling test periods."""
     prediction_frames = []
@@ -279,6 +295,7 @@ def run_regularization_grid(
             l2=l2,
             model_name=model_name,
             training_window=training_window,
+            feature_columns=feature_columns,
         )
         prediction_frames.append(predictions)
         coefficient_frames.append(coefficients)

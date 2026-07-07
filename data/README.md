@@ -16,7 +16,7 @@ Examples:
 - `Premier_League_24_25.csv`
 - `La_Liga_24_25.csv`
 - `Bundesliga_24_25.csv`
-- `Seria_A_24_25.csv`
+- `Serie_A_24_25.csv`
 
 See [`data_dictionary.md`](data_dictionary.md) for the source field definitions.
 

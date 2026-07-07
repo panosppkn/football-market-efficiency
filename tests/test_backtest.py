@@ -191,3 +191,39 @@ def test_execution_candidates_can_include_closing_market_maximum() -> None:
     assert closing["bet_odds"].eq(2.2).all()
     assert closing["closing_odds"].isna().all()
     assert closing["clv_pct"].isna().all()
+
+
+def test_pooled_walk_forward_accepts_custom_feature_columns() -> None:
+    from football_edge.backtest import run_pooled_rolling_walk_forward
+
+    frame = pd.DataFrame(
+        {
+            "date": pd.to_datetime(
+                [
+                    "2021-08-01",
+                    "2021-08-02",
+                    "2022-08-01",
+                    "2022-08-02",
+                    "2023-08-01",
+                    "2023-08-02",
+                ]
+            ),
+            "league": ["League A", "League B"] * 3,
+            "season": ["21_22", "21_22", "22_23", "22_23", "23_24", "23_24"],
+            "market_logit": [-2.0, 2.0, -1.5, 1.5, -1.0, 1.0],
+            "custom_feature": [0.1, 1.0, 0.2, 0.9, 0.3, 0.8],
+            "over_2_5": [0, 1, 0, 1, 0, 1],
+        }
+    )
+
+    predictions, coefficients = run_pooled_rolling_walk_forward(
+        frame,
+        l2=10.0,
+        model_name="custom",
+        training_window=2,
+        feature_columns=["market_logit", "custom_feature"],
+    )
+
+    assert len(predictions) == 2
+    assert predictions["model_probability"].between(0, 1).all()
+    assert "custom_feature" in set(coefficients["coefficient"])

@@ -12,7 +12,14 @@ def test_parse_dataset_name() -> None:
     assert dataset.season == "24_25"
 
 
-def test_corrects_serie_a_source_spelling() -> None:
+def test_parse_serie_a_canonical_filename() -> None:
+    dataset = parse_dataset_name(Path("Serie_A_24_25.csv"))
+
+    assert dataset.league == "Serie A"
+    assert dataset.season == "24_25"
+
+
+def test_corrects_legacy_seria_a_source_spelling() -> None:
     dataset = parse_dataset_name(Path("Seria_A_24_25.csv"))
 
     assert dataset.league == "Serie A"

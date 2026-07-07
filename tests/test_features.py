@@ -21,9 +21,13 @@ def test_features_use_prior_matches_only() -> None:
     team_a = history.loc[history["team"].eq("A")].sort_values("date")
 
     assert pd.isna(team_a.iloc[0]["season_avg_goals"])
+    assert pd.isna(team_a.iloc[0]["season_avg_goals_conceded"])
     assert team_a.iloc[1]["season_avg_goals"] == 2.0
+    assert team_a.iloc[1]["season_avg_goals_conceded"] == 0.0
     assert team_a.iloc[2]["season_avg_goals"] == 1.5
+    assert team_a.iloc[2]["season_avg_goals_conceded"] == 0.5
     assert team_a.iloc[2]["last_5_avg_goals"] == 1.5
+    assert team_a.iloc[2]["last_5_goals_conceded"] == 0.5
 
 
 def test_rolling_feature_uses_only_five_previous_matches() -> None:
@@ -44,3 +48,21 @@ def test_rolling_feature_uses_only_five_previous_matches() -> None:
     # Before match seven, the prior five scores are 2, 3, 4, 5, 6.
     assert team_a.iloc[6]["last_5_avg_goals"] == 4.0
 
+
+def test_conceded_rolling_feature_uses_only_five_previous_matches() -> None:
+    matches = pd.DataFrame(
+        {
+            "match_id": range(7),
+            "date": pd.date_range("2024-08-01", periods=7, freq="7D"),
+            "HomeTeam": ["A"] * 7,
+            "AwayTeam": [f"B{i}" for i in range(7)],
+            "FTHG": [0] * 7,
+            "FTAG": range(1, 8),
+        }
+    )
+
+    history = _team_match_history(matches)
+    team_a = history.loc[history["team"].eq("A")].sort_values("date")
+
+    # Before match seven, the prior five conceded scores are 2, 3, 4, 5, 6.
+    assert team_a.iloc[6]["last_5_goals_conceded"] == 4.0
