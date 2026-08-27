@@ -39,7 +39,7 @@ def build_research_dataset(datasets: Iterable[Dataset]) -> pd.DataFrame:
     """Create one combined frame while retaining league-season boundaries."""
     frames = []
     for dataset in datasets:
-        frame = add_market_features(create_goal_features(dataset.path))
+        frame = add_market_features(create_goal_features(dataset))
         frame["league"] = dataset.league
         frame["season"] = dataset.season
         frames.append(frame)

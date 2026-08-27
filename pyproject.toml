@@ -5,13 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "football-market-edge"
 version = "0.1.0"
-description = "Walk-forward research on market-anchored probability models in European football over/under markets."
+description = "Walk-forward research on football betting market efficiency and odds-implied pricing errors."
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
+    "xlrd>=2.0.1",
+    "openpyxl>=3.1",
+    "pyarrow>=14.0",
     "matplotlib>=3.7",
 ]
 

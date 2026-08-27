@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from football_edge.data import Dataset
+
 from football_edge.config import ODDS_COLUMNS, OVER_25_THRESHOLD
 from football_edge.data import load_matches
 
@@ -44,9 +46,9 @@ def _team_match_history(matches: pd.DataFrame) -> pd.DataFrame:
     return history
 
 
-def create_goal_features(path: str | Path) -> pd.DataFrame:
-    """Build match-level features using only earlier matches in this CSV."""
-    matches = load_matches(path)
+def create_goal_features(source: str | Path | Dataset) -> pd.DataFrame:
+    """Build match-level features using only earlier matches in this dataset."""
+    matches = load_matches(source)
     available_odds = [column for column in ODDS_COLUMNS if column in matches.columns]
     for column in available_odds:
         matches[column] = pd.to_numeric(matches[column], errors="coerce")
@@ -83,6 +85,7 @@ def create_goal_features(path: str | Path) -> pd.DataFrame:
         }
     )
 
+    optional_result_columns = [column for column in ["FTR"] if column in matches.columns]
     match_columns = [
         "match_id",
         "date",
@@ -90,6 +93,7 @@ def create_goal_features(path: str | Path) -> pd.DataFrame:
         "AwayTeam",
         "FTHG",
         "FTAG",
+        *optional_result_columns,
         *available_odds,
     ]
     result = (

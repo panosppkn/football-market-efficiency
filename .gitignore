@@ -6,6 +6,9 @@ __pycache__/
 venv/
 .env
 *.csv
+*.xls
+*.xlsx
+*.parquet
 
 # Generated research artifacts
 reports/*.csv
@@ -14,4 +17,10 @@ reports/*.svg
 !reports/.gitkeep
 
 
+# Local-only research papers / private references
+references/private/
+
 *.egg-info/
+# Local-only archived research notebooks
+notebooks/archive/
+

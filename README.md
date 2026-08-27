@@ -1,305 +1,80 @@
-# Football Over/Under Market Efficiency Research
+# Football Betting Market Efficiency
 
-A reproducible quantitative research project testing whether simple team
-scoring-form variables contain incremental probability information after
-conditioning on no-vig bookmaker consensus odds in European over/under
-2.5-goal markets.
+This repository presents a focused, reproducible quantitative study of football betting market efficiency. It tests whether historical odds contain systematic pricing errors and whether price dispersion across quoted markets can create economically meaningful betting opportunities.
 
-The project is framed as a research prototype, not as betting advice or a
-production trading system. Its main value is the disciplined research workflow:
-leakage-aware feature engineering, chronological model validation, expected
-value based bet selection, source-specific settlement, and honest reporting of
-negative and fragile results.
+The central result is constructive: using an expanding-window out-of-sample design, the market-efficiency decision rule identifies a positive `market_maximum` opportunity set. The average quoted market price is difficult to exploit directly, but the best quoted prices recorded in the data produce positive historical results when selected through the rule.
 
-## Research motivation
+The core idea is to estimate odds-implied probability ranges where historical forecast errors have been consistently positive. Bets are placed only when the lower 95% confidence bound of the fitted pricing-error curve remains above zero, and every test season uses parameters estimated from previous seasons only.
 
-Bookmaker odds are a strong probability benchmark. A realistic betting model
-must therefore do more than predict match outcomes: it must estimate
-probabilities well enough to identify prices where expected value is positive
-after market margin and execution constraints.
+## Research question
 
-This repository investigates seven questions:
+Can systematic pricing patterns in football betting markets be identified, and can price dispersion turn those patterns into economically meaningful opportunities out of sample?
 
-1. After conditioning on no-vig market probability, do recent team
-   scoring-form variables add stable incremental information?
-2. Does pooling multiple leagues into one regularized model improve stability
-   compared with fitting separate league-level models?
-3. When the model estimates positive expected value, do selected bets generate
-   credible out-of-sample ROI and closing-line value?
-4. Can a model-free market-consensus probability support stable fractional
-   Kelly staking across named execution venues?
-5. Does extending the selected model symmetrically to Under 2.5 materially
-   strengthen or weaken the market-efficiency conclusion?
-6. Do simple attacking and defensive team-form features add incremental
-   out-of-sample information beyond market-implied probabilities?
-7. Is the main two-season training-window assumption robust to monthly
-   recalibration with alternative rolling and expanding histories?
+This is not framed as a search for naive bookmaker mistakes. Systematic pricing patterns may arise from bettor demand, favourite-longshot bias, and bookmaker margin allocation. The empirical question is whether these patterns are persistent enough to define betting ranges with positive out-of-sample value.
 
-## Data
+## Main empirical result
 
-The repository uses Football-Data.co.uk CSV files covering:
+The main notebook finds that `market_maximum` is the economically relevant result. In the saved run, the rule selects a meaningful number of market-maximum bets and produces positive flat-stake ROI. By contrast, `average_market` selects only one bet, so it is not economically meaningful. The result is generated out of sample: each test season uses parameters estimated only from previous seasons in an expanding-window design.
 
-- Leagues: Bundesliga, La Liga, Premier League, and Serie A
-- Seasons: 2021/22 through 2025/26
-- Market: over/under 2.5 goals
-- Fields used: match date, teams, full-time goals, market average and maximum
-  odds, named bookmaker odds, and closing odds
+This is the key message of the project:
 
-Raw files are stored under `data/raw/` and are loaded without manual editing.
-Field definitions and source-column interpretations are documented in
-[`data/data_dictionary.md`](data/data_dictionary.md).
+> Average quoted market prices are highly informative, but price dispersion can still matter. Positive results appear when the decision rule is combined with better available prices relative to the average quoted market view.
 
-The source CSV files are not distributed with this repository and are excluded
-from Git. Before running the notebooks, download the relevant league-season
-files directly from
-[Football-Data.co.uk](https://www.football-data.co.uk/downloadm.php) and place
-them in `data/raw/`. Files must follow the naming convention documented in
-[`data/README.md`](data/README.md), for example
-`Premier_League_24_25.csv`.
+`market_maximum` represents the best quoted price recorded within the Football-Data coverage universe. It is the key series for studying whether price dispersion creates value. The result is not dismissed as artificial; it is a useful best-available-price opportunity set. The important execution caveat is that exact timestamped executability is not proven because quote timestamps, liquidity, and account constraints are not available in the dataset.
+
+### Representative Kelly diagnostic
+
+The main empirical result is the positive flat-stake ROI for the `market_maximum` opportunity set. Fractional Kelly staking is included as a sizing and path-risk diagnostic on the same selected bets; it does not change the bet-selection rule. The tested capped fractional-Kelly variants remain positive, supporting robustness to stake-sizing assumptions.
+
+![Market-maximum Kelly return on staked capital by season](docs/assets/market_maximum_kelly_return_by_season.png)
+
+The plot shows return on staked capital by season for capped fractional-Kelly staking. It connects the statistical decision rule to bankroll-sensitive implementation and shows that the positive result is not tied to a single staking fraction. Kelly remains sensitive to probability-estimation error, so the figure is best interpreted as supportive economic evidence and a path-risk diagnostic.
 
 ## Methodology
 
-### Target
+The main notebook implements a market-efficiency decision rule inspired by Angelini and De Angelis (2019). The full equations and implementation details are shown in notebook Section 3; the core workflow is:
 
-The binary target is:
+1. Convert quoted decimal odds into raw implied probabilities: $p_i = 1 / odds_i$.
+2. Define forecast errors as realized outcomes minus implied probabilities: $\varepsilon_i = y_i - p_i$.
+3. Estimate one pricing-error curve per source and league using historical data, with an intercept and a probability slope fitted from prior seasons.
+4. For each test season, estimate parameters using previous seasons only in an expanding-window walk-forward design.
+5. Derive accepted implied-probability ranges from the fitted prior-season curve, requiring the lower 95% confidence bound to be positive.
+6. Apply the fitted rule out of sample by betting only when current odds fall inside those accepted ranges.
+7. Evaluate selected bets using flat-stake ROI, fractional-Kelly staking, and bootstrap robustness diagnostics.
 
-```text
-1 if total full-time goals > 2.5, else 0
-```
+The public analysis focuses on two market sources:
 
-### Features
+- `average_market`: the average quoted market price;
+- `market_maximum`: the best quoted market price in the Football-Data files.
 
-For each match, the model uses information available before the fixture:
+This separation is important. `average_market` represents the broad market view, while `market_maximum` captures the best-price opportunity set available in the historical data.
 
-- no-vig market log-odds from average pre-closing over/under prices;
-- home season-to-date average goals scored;
-- away season-to-date average goals scored;
-- home average goals scored over the previous five matches;
-- away average goals scored over the previous five matches.
+## Data
 
-Team-form features are shifted by one match, so the current match result cannot
-enter its own predictors. Feature histories restart within each league-season.
+The project uses historical football results and betting odds from [Football-Data.co.uk](https://www.football-data.co.uk/), including season-level European files and league-level files where relevant.
 
-### Market-anchored probability model
-
-The core model is an L2-regularized logistic regression implemented in
-`src/football_edge/model.py`. It is a **market-anchored probability model**,
-not a fundamentals-only football model: no-vig consensus market log-odds form
-the primary anchor, while team-form variables estimate conditional adjustments
-to that anchor. Predictors are standardized using training data only, and model
-convergence is checked.
-
-The research evolved through two model designs:
-
-1. **League-specific market-anchored baseline**: separate walk-forward models
-   are trained for each league. This is useful as a benchmark, but it has small-sample and
-   coefficient-stability issues.
-2. **Pooled market-anchored model**: one unified model is trained across all
-   leagues using exactly the previous two seasons before each test season. League
-   indicators allow different league baselines while sharing market and form
-   slopes. This is the main modeling direction.
-
-Notebook 02 compares ridge penalties of 1, 10, and 100. Notebook 01 presents
-the selected pooled specification with `L2 = 100`.
-
-### Walk-forward validation
-
-The project avoids random splits. Models are evaluated chronologically:
-
-- train only on seasons before the test season;
-- assert that the latest training date is earlier than the first test date;
-- standardize features using training data only;
-- evaluate all model variants on comparable out-of-sample periods.
-
-For the selected pooled model, each test season is predicted using only the
-previous two seasons across all available leagues.
-
-## Betting logic
-
-The strategy is expressed in expected-value terms:
+Raw source data are not redistributed in this repository. To reproduce the analysis, download the relevant Football-Data.co.uk files and place them under:
 
 ```text
-EV = model_probability * decimal_odds - 1
+data/raw/
 ```
 
-Here, `model_probability` is a market-adjusted estimate. The economic test asks
-whether its conditional adjustments identify execution prices that are
-mispriced relative to the market anchor; it does not compare an independent
-fundamentals forecast with unrelated bookmaker prices.
+For faster repeated execution, the repository includes a reproducible conversion pipeline that translates the raw season-level Excel files into one Parquet file per season:
 
-In the main strategy notebook, a flat one-unit Over 2.5 bet is selected only when:
-
-```text
-EV >= 3%
+```bash
+python scripts/build_all_euro_season_parquets.py
 ```
 
-The same model probability is evaluated against multiple execution-price
-scenarios:
+The generated Parquet files stay local and are used only as a faster cache. They preserve the raw Football-Data fields as closely as possible and are not a separate data source.
 
-- Bet365
-- Pinnacle
-- Betfair Exchange
-- Market average
-- Market maximum
-- Closing market maximum sensitivity (`MaxC>2.5`, used only as an optimistic
-  diagnostic because it is not a pre-closing executable quote)
+## Public notebooks
 
-ROI is calculated as total betting profit divided by total staked units. It is
-not a portfolio return on starting capital. The main pooled-model study uses
-flat stakes. Notebook 05 separately tests prespecified fractional Kelly rules
-using a model-free market-consensus probability; this is a bankroll-risk
-experiment, not evidence independent of the underlying probability signal.
-Notebook 06 extends the selected market-anchored model to a two-sided robustness
-check: Over-only, Under-only, and higher-EV-side selection are evaluated with
-the same fixed threshold and walk-forward predictions. The project does not
-implement volatility targeting or portfolio optimization across simultaneous
-betting venues.
+The public notebook sequence is intentionally minimal: one notebook contains the complete research presentation.
 
-## Evaluation
+| Notebook | Role |
+|---|---|
+| `01_market_efficiency_decision_rule.ipynb` | Main research notebook. Implements the expanding-window market-efficiency decision rule, reports flat-stake results, fractional-Kelly staking, and bootstrap robustness. |
 
-The repository reports both predictive and economic diagnostics:
-
-- Brier score
-- log loss
-- accuracy
-- calibration intercept and slope
-- coefficient stability
-- expected-value bucket diagnostics
-- number of bets
-- hit rate
-- average odds
-- realized ROI
-- approximate ROI confidence intervals
-- cumulative profit / drawdown style diagnostics
-- closing-line value where a later closing quote exists
-- monthly ROI and monthly selected-bet counts
-
-The EV-bucket notebook groups all candidate bets into fixed, prespecified
-buckets:
-
-```text
-<0%, 0-2%, 2-4%, 4-6%, 6-10%, >=10%
-```
-
-This is intended to diagnose whether higher estimated EV is associated with
-better realized performance, without choosing a new threshold after seeing the
-backtest.
-
-## Key findings
-
-The main empirical result is cautious:
-
-- The market-implied probability is the dominant forecasting signal and is
-  very hard to beat.
-- The simple scoring-form variables do not demonstrate stable incremental value
-  after conditioning on the market anchor.
-- The first league-specific approach is unstable and does not show a reliable
-  edge.
-- Pooling leagues and using stronger L2 regularization improves coefficient
-  stability and calibration relative to weaker regularization settings.
-- The selected pooled model (`L2 = 100`, previous two seasons, all leagues)
-  is more statistically stable than the initial league-specific baseline.
-- The two-sided Over/Under extension in notebook 06 is useful as a robustness
-  check, but it does not reveal a stronger tradable edge; Under-side positives
-  are weak after CLV, uncertainty, and seasonal stability are considered.
-- Notebook 07 tests whether simple attacking and defensive form features add
-  incremental information beyond the market-only benchmark; the evidence does
-  not justify replacing the parsimonious market-anchored model.
-- However, the tested specification still does not establish a robust,
-  production-ready betting edge. ROI and CLV vary materially across execution
-  source, season, and league.
-
-In short: the pooled model is a better research direction, but the current data
-and feature set are not sufficient to claim persistent profitability.
-
-## Representative result
-
-![Consensus strategy ROI confidence intervals and closing-line value](docs/assets/consensus_roi_clv.png)
-
-The independent market-consensus experiment in notebook 05 illustrates the
-project's central conclusion. Betfair Exchange has the strongest realized
-point estimate, but its date-cluster confidence interval crosses zero and its
-mean closing-line value is negative. Other executable sources are either
-approximately flat, negative, or too sparse for reliable inference. The
-closing-market maximum is shown only as a non-executable sensitivity.
-
-## Limitations and points requiring caution
-
-This section is deliberately explicit because these are exactly the issues a
-professional quantitative reviewer should care about.
-
-### Signal and execution-price dependence
-
-The no-vig market logit is constructed from average pre-closing odds, and the
-tested named-bookmaker or market-maximum prices may contribute to that same
-consensus. This is not target leakage because match outcomes are not used, but
-it means the probability signal and execution prices are not fully independent.
-Without constituent quotes, a leave-one-bookmaker-out consensus cannot be
-constructed. Results should therefore be interpreted as a market-relative
-pricing overlay rather than evidence from a standalone fundamentals model.
-
-### Quote timing and executability
-
-The dataset distinguishes pre-closing and closing odds, but it does not provide
-reliable exact timestamps for when each quote was available. The analysis
-therefore cannot fully verify that every price used in the backtest was
-simultaneously observable and executable at decision time.
-
-Named bookmaker prices are more realistic execution proxies than market-average
-or market-maximum prices, but the project still cannot model stake limits,
-liquidity, rejected bets, account restrictions, or live market availability.
-
-### Pinnacle 2025/26 data quality
-
-Football-Data reports that Pinnacle odds became systematically unreliable after
-23 July 2025 because of problems with its public API, and that Pinnacle was
-subsequently excluded from market-average and market-maximum calculations.
-Pinnacle results for 2025/26 and cross-season comparisons involving consensus
-prices should therefore be interpreted cautiously. See the
-[official Football-Data notice](https://www.football-data.co.uk/data).
-
-### Market maximum and closing maximum
-
-Market-maximum odds are an optimistic benchmark because the best available
-bookmaker can differ from match to match. Closing market maximum (`MaxC>2.5`)
-is even more restrictive: it is a closing-price sensitivity, not a genuine
-pre-match execution assumption. It should be interpreted as a diagnostic upper
-bound, not as evidence of executable profitability.
-
-### Potential data leakage risk
-
-Rolling goal features are shifted and walk-forward folds are chronological.
-Those safeguards reduce target leakage. The main unresolved leakage risk is
-odds timing: without quote timestamps, the repository cannot prove that every
-odds field was available before the model decision point.
-
-### Statistical uncertainty
-
-Betting outcomes are noisy and can be dominated by a small number of matches.
-Approximate confidence intervals are useful diagnostics but do not fully
-account for clustering by league, season, matchday, or common model error.
-
-### Researcher degrees of freedom
-
-The 3% EV threshold is treated as prespecified, and the EV-bucket analysis is
-used to avoid threshold hunting. Still, choices such as feature set, rolling
-window length, model family, training window, and regularization grid are
-research decisions. Further out-of-sample or live paper-trading validation is
-needed.
-
-### Feature scope
-
-The model intentionally uses a compact feature set. It does not include goals
-conceded, opponent strength, expected goals, injuries, lineups, rest days,
-travel, team news, weather, liquidity, or intraday market movement. A negative
-or fragile result for this simple specification does not imply that no football
-market edge exists.
-
-### Data provenance
-
-Before public release, verify the source URLs, download dates, and licensing
-terms for all raw files, especially the 2025/26 data. A checksum-based data
-manifest would improve reproducibility.
 
 ## Repository structure
 
@@ -307,53 +82,26 @@ manifest would improve reproducibility.
 football-market-efficiency/
 |-- .github/workflows/tests.yml
 |-- data/
-|   |-- raw/                    # Football-Data.co.uk CSV files
+|   |-- raw/                    # user-provided Football-Data.co.uk files
+|   |-- processed/              # generated local Parquet cache, not required in git
 |   |-- README.md
 |   `-- data_dictionary.md
 |-- docs/
-|   -- assets/                 # figures embedded in project documentation
+|   `-- assets/                 # figures embedded in documentation
 |-- notebooks/
-|   |-- 01_main_pooled_l2_100_edge_analysis.ipynb
-|   |-- 02_pooled_regularization_comparison.ipynb
-|   |-- 03_ev_bucket_diagnostics.ipynb
-|   |-- 04_league_specific_baseline.ipynb
-|   |-- 05_consensus_kelly_staking.ipynb
-|   |-- 06_two_sided_market_efficiency.ipynb
-|   |-- 07_feature_incremental_value.ipynb
-|   |-- 08_monthly_recalibration_window_robustness.ipynb
+|   |-- 01_market_efficiency_decision_rule.ipynb
 |   `-- README.md
-|-- reports/                    # generated artifacts, kept out of git
+|-- scripts/
+|   `-- build_all_euro_season_parquets.py
 |-- src/football_edge/
-|   |-- config.py               # research constants and scenarios
-|   |-- data.py                 # dataset discovery and validation
-|   |-- features.py             # leakage-safe team-form features
-|   |-- model.py                # transparent logistic regression
-|   |-- backtest.py             # walk-forward evaluation and settlement
-|   |-- staking.py              # consensus signal and Kelly bankroll tests
-|   |-- two_sided.py            # Over/Under candidate and settlement logic
-|   `-- plotting.py             # reusable figures
+|   |-- data.py                 # data discovery, loading, and Football-Data column standardization
+|   |-- market_efficiency.py    # main market-efficiency model, walk-forward rule, ROI/Kelly/bootstrap diagnostics
+|   |-- plotting.py             # plotting helpers used by the public notebook
+|   `-- config.py               # project paths and shared constants
 |-- tests/
 |-- pyproject.toml
 `-- README.md
 ```
-
-## Notebook guide
-
-Start with notebook 01 if you want the main result.
-
-| Notebook | Role |
-|---|---|
-| `01_main_pooled_l2_100_edge_analysis.ipynb` | Main selected-model analysis: pooled all-league model, previous two seasons, `L2 = 100`. |
-| `02_pooled_regularization_comparison.ipynb` | Model-selection experiment comparing pooled two-season ridge settings. |
-| `03_ev_bucket_diagnostics.ipynb` | EV-bucket diagnostics for the selected pooled model. |
-| `04_league_specific_baseline.ipynb` | Baseline/research-evolution notebook using separate league-level models. |
-| `05_consensus_kelly_staking.ipynb` | Independent market-consensus benchmark with flat-stake and capped fractional-Kelly diagnostics. |
-| `06_two_sided_market_efficiency.ipynb` | Exploratory Over/Under symmetry test for the selected market-anchored model. |
-| `07_feature_incremental_value.ipynb` | Incremental-value test for simple football-form features versus the market-only benchmark. |
-| `08_monthly_recalibration_window_robustness.ipynb` | Monthly recalibration robustness test for the selected two-season training-window assumption. |
-
-Reusable research logic lives in `src/football_edge/`; notebooks are intended
-for presentation and interpretation rather than duplicated implementation.
 
 ## How to run
 
@@ -371,12 +119,10 @@ python -m pip install -e ".[dev]"
 python -m pip install jupyter
 ```
 
-Download the source CSV files as described in
-[`data/README.md`](data/README.md) before running any notebook. The expected
-directory is:
+Download the source Football-Data.co.uk files as described in [`data/README.md`](data/README.md), then optionally build the Parquet cache:
 
-```text
-data/raw/
+```bash
+python scripts/build_all_euro_season_parquets.py
 ```
 
 Run the tests:
@@ -385,73 +131,53 @@ Run the tests:
 pytest
 ```
 
-Run the notebooks:
+Run the public notebooks:
 
 ```bash
-jupyter notebook notebooks/01_main_pooled_l2_100_edge_analysis.ipynb
-jupyter notebook notebooks/02_pooled_regularization_comparison.ipynb
-jupyter notebook notebooks/03_ev_bucket_diagnostics.ipynb
-jupyter notebook notebooks/04_league_specific_baseline.ipynb
-jupyter notebook notebooks/05_consensus_kelly_staking.ipynb
-jupyter notebook notebooks/06_two_sided_market_efficiency.ipynb
-jupyter notebook notebooks/07_feature_incremental_value.ipynb
-jupyter notebook notebooks/08_monthly_recalibration_window_robustness.ipynb
+jupyter notebook notebooks/01_market_efficiency_decision_rule.ipynb
 ```
-
-Each notebook rebuilds its own data, features, predictions, and backtest
-outputs from the raw CSV files.
 
 ## Reproducibility
 
 - Package version: `football-market-edge==0.1.0`.
-- Supported Python version: Python 3.9 or later; the notebooks were prepared
-  with Python 3.11.
-- Stochastic component: the date-cluster bootstrap in notebook 05 uses the
-  fixed random seed `42`. Data loading, feature engineering, logistic-model
-  fitting, walk-forward splits, bet settlement, and Kelly simulations are
-  otherwise deterministic for identical input files and dependency versions.
-- Expected runtime: approximately 30-120 seconds per notebook and 5-15 minutes
-  for all eight notebooks on a typical modern laptop. Runtime depends on CPU,
-  storage, plotting backend, and the number of bootstrap replications.
-- Tests: run `pytest` from the repository root after installing
-  `.[dev]`.
+- Supported Python version: Python 3.9 or later; the notebooks were prepared with Python 3.11.
+- Randomness: bootstrap and Kelly robustness diagnostics use fixed random seeds configured in the notebooks.
+- Deterministic components: data loading, feature construction, walk-forward splits, regression fitting, bet settlement, and deterministic summaries are reproducible for identical input files and dependency versions.
+- Expected runtime: approximately 1-5 minutes for the main notebook after the Parquet cache has been built. Runtime depends on selected seasons/leagues, plotting backend, and bootstrap replications.
 
-Exact reproduction requires the same Football-Data source files. Because the
-CSV files are downloaded separately and may be revised by the provider, record
-their download dates and checksums when reproducing published results.
+Exact reproduction requires the same Football-Data source files. Because provider files may be revised over time, a fully locked replication should record source URLs, download dates, and checksums.
+
+## Limitations and points requiring caution
+
+The project is intentionally explicit about limitations because they are central to credible quantitative research.
+
+- `market_maximum` is the best quoted price recorded within the Football-Data coverage universe. It is directly relevant for studying price dispersion; exact live executability cannot be verified for every match without quote timestamps and liquidity data.
+- Football-Data odds do not provide synchronized quote timestamps.
+- Liquidity, stake limits, account restrictions, rejected bets, and commission are not fully modeled.
+- Market/source coverage differs across seasons and leagues.
+- COVID-era seasons may have different match and market dynamics.
+- The analysis identifies historical pricing patterns; it does not establish why those patterns arise.
+- Historical price dispersion may decay as markets become more efficient.
+- Bootstrap diagnostics help assess robustness, but they cannot prove live tradability.
+
+The project should be read as a market-efficiency and price-selection study, not as betting advice or a production trading system. The historical evidence is constructive, and live implementation would require timestamped quotes and explicit execution assumptions.
 
 ## Future work
 
-The most important extensions are:
+High-value extensions would be:
 
-- collect timestamped odds snapshots and verify exact quote availability;
-- run live paper-trading validation before any real-money interpretation;
-- add richer pre-match features such as injuries, lineups, rest days, team
-  strength, goals conceded, expected goals, and market movement;
-- compare the current model against a fitted market-only logistic benchmark;
-- add clustered bootstrap uncertainty estimates by league-season or matchday;
-- test transaction-cost and commission sensitivity;
-- add a data manifest with source URLs, download dates, and checksums.
+- validate the rule prospectively on genuinely unseen matches;
+- collect timestamped odds snapshots to verify simultaneous price availability;
+- add explicit commission, liquidity, and stake-limit sensitivity.
 
-## Conclusion
+## Reference
 
-The bookmaker consensus is the dominant probability signal in this sample. The
-pooled market-anchored model is more stable than separate league-level models,
-but the simple scoring-form variables do not demonstrate reliable incremental
-information after conditioning on that anchor.
+The main methodology is inspired by:
 
-Expected-value filters produce isolated positive periods, not a robust
-executable edge. The model should therefore be interpreted as a market-relative
-calibration and pricing overlay, not as a standalone fundamentals model.
-Timestamped constituent odds, a fitted market-only ablation, verified costs,
-and prospective paper trading are required before stronger economic claims can
-be made.
+> Angelini, G., & De Angelis, L. (2019). Efficiency of online football betting markets. *International Journal of Forecasting*, 35(2), 712-721.
 
-## Data source and license
+## License
 
-Odds and match data come from
-[Football-Data.co.uk](https://www.football-data.co.uk/). Source datasets remain
-subject to the provider's terms and are not covered by this repository's
-software license.
+Odds and match data come from [Football-Data.co.uk](https://www.football-data.co.uk/) and remain subject to the provider's terms. Source datasets are not redistributed in this repository.
 
 Analysis code is available under the MIT License.

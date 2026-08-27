@@ -7,6 +7,7 @@ RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 
 DATA_PATTERN = "*_??_??.csv"
+ALL_EURO_DATA_PATTERN = "all-euro*.xls*"
 OVER_25_THRESHOLD = 2.5
 MINIMUM_EXPECTED_VALUE = 0.03
 
@@ -23,7 +24,6 @@ EV_BUCKET_LABELS = ["<0%", "0-2%", "2-4%", "4-6%", "6-10%", ">=10%"]
 
 REQUIRED_COLUMNS = {
     "Date",
-    "Time",
     "HomeTeam",
     "AwayTeam",
     "FTHG",
@@ -51,6 +51,24 @@ ODDS_COLUMNS = [
     "BFE<2.5",
     "BFEC>2.5",
     "BFEC<2.5",
+    "AvgH",
+    "AvgD",
+    "AvgA",
+    "MaxH",
+    "MaxD",
+    "MaxA",
+    "B365H",
+    "B365D",
+    "B365A",
+    "PSH",
+    "PSD",
+    "PSA",
+    "PSCH",
+    "PSCD",
+    "PSCA",
+    "BFEH",
+    "BFED",
+    "BFEA",
 ]
 
 MODEL_FEATURES = [
