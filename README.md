@@ -128,7 +128,7 @@ python scripts/build_all_euro_season_parquets.py
 Run the tests:
 
 ```bash
-pytest
+python -m pytest
 ```
 
 Run the public notebooks:
@@ -174,7 +174,7 @@ High-value extensions would be:
 
 The main methodology is inspired by:
 
-> Angelini, G., & De Angelis, L. (2019). Efficiency of online football betting markets. *International Journal of Forecasting*, 35(2), 712-721.
+> Angelini, G., & De Angelis, L. (2019). Efficiency of online football betting markets. *International Journal of Forecasting*, 35(2), 712-721. https://doi.org/10.1016/j.ijforecast.2018.07.008
 
 ## License
 
