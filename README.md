@@ -1,6 +1,6 @@
 # Football Betting Market Efficiency
 
-This repository presents a focused, reproducible quantitative study of football betting market efficiency. It tests whether historical odds contain systematic pricing errors and whether price dispersion across quoted markets can create economically meaningful betting opportunities.
+This repository presents a focused, reproducible quantitative study of football betting market efficiency. It tests whether historical odds contain systematic pricing patterns and whether price dispersion across quoted markets can create economically meaningful betting opportunities.
 
 The central result is constructive: using an expanding-window out-of-sample design, the market-efficiency decision rule identifies a positive `market_maximum` opportunity set. The average quoted market price is difficult to exploit directly, but the best quoted prices recorded in the data produce positive historical results when selected through the rule.
 
@@ -10,7 +10,7 @@ The core idea is to estimate odds-implied probability ranges where historical fo
 
 Can systematic pricing patterns in football betting markets be identified, and can price dispersion turn those patterns into economically meaningful opportunities out of sample?
 
-This is not framed as a search for naive bookmaker mistakes. Systematic pricing patterns may arise from bettor demand, favourite-longshot bias, and bookmaker margin allocation. The empirical question is whether these patterns are persistent enough to define betting ranges with positive out-of-sample value.
+This is not framed as a search for naive bookmaker mistakes. Systematic pricing patterns may arise from bettor demand, favourite-longshot bias, and bookmaker margin allocation. The empirical question is whether these structural effects are persistent enough to define betting ranges with positive out-of-sample value.
 
 ## Main empirical result
 
@@ -18,9 +18,9 @@ The main notebook finds that `market_maximum` is the economically relevant resul
 
 This is the key message of the project:
 
-> Average quoted market prices are highly informative, but price dispersion can still matter. Positive results appear when the decision rule is combined with better available prices relative to the average quoted market view.
+> Historical odds are highly informative, but price dispersion can still matter. The strongest economic signal appears in `market_maximum`, suggesting that best available quoted prices can be valuable when combined with a conservative statistical decision rule.
 
-`market_maximum` represents the best quoted price recorded within the Football-Data coverage universe. It is the key series for studying whether price dispersion creates value. The result is not dismissed as artificial; it is a useful best-available-price opportunity set. The important execution caveat is that exact timestamped executability is not proven because quote timestamps, liquidity, and account constraints are not available in the dataset.
+`market_maximum` represents the best quoted price recorded within the Football-Data coverage universe. It is the key series for studying whether price dispersion creates value. Football-Data states that these odds snapshots are collected before fixtures are played: Friday afternoons for weekend games and Tuesday afternoons for midweek games. The result is therefore not dismissed as artificial; it is a useful best-available-price opportunity set. The important execution caveat is that exact timestamped executability is not proven because synchronized quote timestamps, liquidity, and account constraints are not available in the dataset.
 
 ### Representative Kelly diagnostic
 
@@ -42,6 +42,8 @@ The main notebook implements a market-efficiency decision rule inspired by Angel
 6. Apply the fitted rule out of sample by betting only when current odds fall inside those accepted ranges.
 7. Evaluate selected bets using flat-stake ROI, fractional-Kelly staking, and bootstrap robustness diagnostics.
 
+The main specification keeps the key research choices fixed: the top-division league universe, all available seasons, an expanding-window walk-forward design, and the paper-style 95% lower-confidence-bound decision rule. This reduces discretionary parameter search while keeping the test simple and transparent.
+
 The public analysis focuses on two market sources:
 
 - `average_market`: the average quoted market price;
@@ -52,6 +54,8 @@ This separation is important. `average_market` represents the broad market view,
 ## Data
 
 The project uses historical football results and betting odds from [Football-Data.co.uk](https://www.football-data.co.uk/), including season-level European files and league-level files where relevant.
+
+Football-Data states that betting odds for weekend fixtures are collected on Friday afternoons and midweek fixtures on Tuesday afternoons. Therefore, `market_maximum` is interpreted as the best quoted price available in the recorded pre-match snapshot. This supports its use as an opportunity-set proxy, while exact timestamped executability, liquidity, account limits, and capacity are not proven.
 
 Raw source data are not redistributed in this repository. To reproduce the analysis, download the relevant Football-Data.co.uk files and place them under:
 
@@ -66,6 +70,8 @@ python scripts/build_all_euro_season_parquets.py
 ```
 
 The generated Parquet files stay local and are used only as a faster cache. They preserve the raw Football-Data fields as closely as possible and are not a separate data source.
+
+Forward-monitoring parameter snapshots can be stored under [`docs/parameter_snapshots/`](docs/parameter_snapshots/). The intended convention is to publish frozen `market_maximum` parameters and accepted odds ranges using a stated training cutoff, before evaluating any future results generated with those parameters.
 
 ## Public notebooks
 
@@ -151,8 +157,7 @@ Exact reproduction requires the same Football-Data source files. Because provide
 
 The project is intentionally explicit about limitations because they are central to credible quantitative research.
 
-- `market_maximum` is the best quoted price recorded within the Football-Data coverage universe. It is directly relevant for studying price dispersion; exact live executability cannot be verified for every match without quote timestamps and liquidity data.
-- Football-Data odds do not provide synchronized quote timestamps.
+- `market_maximum` is the best quoted price recorded within the Football-Data coverage universe. It is directly relevant for studying price dispersion; exact timestamped executability is not proven for every match without synchronized quote timestamps, liquidity data, and limit information.
 - Liquidity, stake limits, account restrictions, rejected bets, and commission are not fully modeled.
 - Market/source coverage differs across seasons and leagues.
 - COVID-era seasons may have different match and market dynamics.
