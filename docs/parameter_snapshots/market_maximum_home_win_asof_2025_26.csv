@@ -1,0 +1,5 @@
+as_of_training_end_season,market_outcome,source,league,alpha,beta,accepted_probability_min,accepted_probability_max,accepted_odds_min,accepted_odds_max
+25_26,home_win,market_maximum,Greek Super League,-0.042914,0.087709,0.675,0.990,1.010,1.481
+25_26,home_win,market_maximum,La Liga,-0.014866,0.055447,0.454,0.990,1.010,2.203
+25_26,home_win,market_maximum,Primeira Liga,-0.046892,0.102088,0.595,0.990,1.010,1.681
+25_26,home_win,market_maximum,Serie A,-0.038014,0.073193,0.820,0.990,1.010,1.220

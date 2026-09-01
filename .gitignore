@@ -6,6 +6,7 @@ __pycache__/
 venv/
 .env
 *.csv
+!docs/parameter_snapshots/*.csv
 *.xls
 *.xlsx
 *.parquet
@@ -23,4 +24,4 @@ references/private/
 *.egg-info/
 # Local-only archived research notebooks
 notebooks/archive/
-
+notebooks/internal/
