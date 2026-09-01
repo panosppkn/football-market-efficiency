@@ -71,7 +71,7 @@ python scripts/build_all_euro_season_parquets.py
 
 The generated Parquet files stay local and are used only as a faster cache. They preserve the raw Football-Data fields as closely as possible and are not a separate data source.
 
-Forward-monitoring parameter snapshots can be stored under [`docs/parameter_snapshots/`](docs/parameter_snapshots/). The intended convention is to publish frozen `market_maximum` parameters and accepted odds ranges using a stated training cutoff, before evaluating any future results generated with those parameters.
+Forward-monitoring parameter snapshots are stored under [`docs/parameter_snapshots/`](docs/parameter_snapshots/). The intended convention is to publish frozen `market_maximum` parameters and accepted odds ranges using a stated training cutoff, before evaluating any future results generated with those parameters.
 
 ## Public notebooks
 
@@ -93,7 +93,8 @@ football-market-efficiency/
 |   |-- README.md
 |   `-- data_dictionary.md
 |-- docs/
-|   `-- assets/                 # figures embedded in documentation
+|   |-- assets/                 # figures embedded in documentation
+|   `-- parameter_snapshots/    # frozen rules for prospective monitoring
 |-- notebooks/
 |   |-- 01_market_efficiency_decision_rule.ipynb
 |   `-- README.md
