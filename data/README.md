@@ -24,10 +24,12 @@ season files and the 11 first-division European leagues selected in the main
 notebook. The notebook can also be configured to use a smaller season or league
 subset.
 
+The original Football-Data Excel files can be loaded directly. An optional
+conversion script creates a local Parquet cache for faster repeated execution.
+
 ## Faster local Parquet cache
 
-Excel loading can be slow, so the repository includes a reproducible conversion
-script that creates one Parquet file per season:
+The optional reproducible conversion script creates one Parquet file per season:
 
 ```bash
 python scripts/build_all_euro_season_parquets.py
@@ -45,6 +47,16 @@ Football-Data columns as closely as possible, add metadata columns such as
 normalize odds, probabilities, or outcomes.
 
 Both raw files and generated Parquet files are excluded from Git.
+
+## Forward monthly collection
+
+The forward Polymarket collection notebook expects the manually updated current-season Football-Data workbook under `data/holdout/`, for example:
+
+```text
+data/holdout/all-euro-data-2026-2027.xlsx
+```
+
+It writes local league-month match summaries and eligible Dune transaction files under `data/holdout/dune_cache/`. These generated inputs and outputs are excluded from Git and are not redistributed by this repository. Finalized monthly files are protected against accidental replacement by default.
 
 ## Dependencies
 

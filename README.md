@@ -22,6 +22,10 @@ This is the key message of the project:
 
 `market_maximum` represents the best quoted price recorded within the Football-Data coverage universe. It is the key series for studying whether price dispersion creates value. Football-Data states that these odds snapshots are collected before fixtures are played: Friday afternoons for weekend games and Tuesday afternoons for midweek games. The result is therefore not dismissed as artificial; it is a useful best-available-price opportunity set. The important execution caveat is that exact timestamped executability is not proven because synchronized quote timestamps, liquidity, and account constraints are not available in the dataset.
 
+### 2026/27 forward holdout
+
+The historical decision rule and league-specific acceptance ranges were frozen using data through 2025/26 and are now being evaluated on the 2026/27 forward holdout. The current report combines the Football-Data reference-price benchmark with the stricter Polymarket transaction-based execution evaluation. See the [2026/27 forward holdout report](reports/current_season_holdout/README.md) for the latest results.
+
 ### Representative Kelly diagnostic
 
 The main empirical result is the positive flat-stake ROI for the `market_maximum` opportunity set. Fractional Kelly staking is included as a sizing and path-risk diagnostic on the same selected bets; it does not change the bet-selection rule. The tested capped fractional-Kelly variants remain positive, supporting robustness to stake-sizing assumptions.
@@ -63,7 +67,7 @@ Raw source data are not redistributed in this repository. To reproduce the analy
 data/raw/
 ```
 
-For faster repeated execution, the repository includes a reproducible conversion pipeline that translates the raw season-level Excel files into one Parquet file per season:
+The original Football-Data Excel files can be loaded directly. For faster repeated analysis, an optional reproducible conversion script creates one local Parquet file per season:
 
 ```bash
 python scripts/build_all_euro_season_parquets.py
@@ -75,11 +79,16 @@ Forward-monitoring parameter snapshots are stored under [`docs/parameter_snapsho
 
 ## Public notebooks
 
-The public notebook sequence is intentionally minimal: one notebook contains the complete research presentation.
+The public notebook sequence is intentionally small: the main notebook presents the historical research, the benchmark evaluates the frozen rule at Football-Data `MaxH`, the collection notebook creates auditable monthly transaction data, and the execution notebook evaluates those finalized files offline.
+
+For the latest consolidated 2026/27 forward results, see the [forward holdout report](reports/current_season_holdout/README.md).
 
 | Notebook | Role |
 |---|---|
 | `01_market_efficiency_decision_rule.ipynb` | Main research notebook. Implements the expanding-window market-efficiency decision rule, reports flat-stake results, fractional-Kelly staking, and bootstrap robustness. |
+| `02_forward_market_maximum_benchmark.ipynb` | Football-Data reference-price benchmark. Applies the frozen rule to all completed matches and assumes full execution at Football-Data `MaxH`, without venue or liquidity claims. |
+| `03_forward_polymarket_data_collection.ipynb` | Monthly forward-data workflow. Applies the published frozen `market_maximum` rule, resolves Polymarket markets through Dune, and stores eligible execution observations without calculating P&L. |
+| `04_forward_polymarket_execution.ipynb` | Forward execution report. Loads every finalized league-month file, applies the frozen transaction-based execution assumptions, and reports combined and standalone league-sleeve results. |
 
 
 ## Repository structure
@@ -90,6 +99,7 @@ football-market-efficiency/
 |-- data/
 |   |-- raw/                    # user-provided Football-Data.co.uk files
 |   |-- processed/              # generated local Parquet cache, not required in git
+|   |-- holdout/                # local current-season inputs and monthly Dune outputs
 |   |-- README.md
 |   `-- data_dictionary.md
 |-- docs/
@@ -97,12 +107,22 @@ football-market-efficiency/
 |   `-- parameter_snapshots/    # frozen rules for prospective monitoring
 |-- notebooks/
 |   |-- 01_market_efficiency_decision_rule.ipynb
+|   |-- 02_forward_market_maximum_benchmark.ipynb
+|   |-- 03_forward_polymarket_data_collection.ipynb
+|   |-- 04_forward_polymarket_execution.ipynb
 |   `-- README.md
+|-- reports/
+|   `-- current_season_holdout/
+|       |-- README.md           # consolidated forward results
+|       `-- figures/
 |-- scripts/
 |   `-- build_all_euro_season_parquets.py
 |-- src/football_edge/
 |   |-- data.py                 # data discovery, loading, and Football-Data column standardization
 |   |-- market_efficiency.py    # main market-efficiency model, walk-forward rule, ROI/Kelly/bootstrap diagnostics
+|   |-- forward_benchmark.py    # current-season MaxH reference-price benchmark and reporting summaries
+|   |-- forward_polymarket.py   # frozen-rule selection and monthly Dune/Polymarket collection
+|   |-- forward_execution.py    # chronological traded-flow execution and risk reporting
 |   |-- plotting.py             # plotting helpers used by the public notebook
 |   `-- config.py               # project paths and shared constants
 |-- tests/
@@ -138,11 +158,31 @@ Run the tests:
 python -m pytest
 ```
 
-Run the public notebooks:
+Run the historical research notebook:
 
 ```bash
 jupyter notebook notebooks/01_market_efficiency_decision_rule.ipynb
 ```
+
+After updating the local current-season workbook under `data/holdout/`, run the Football-Data reference-price benchmark:
+
+```bash
+jupyter notebook notebooks/02_forward_market_maximum_benchmark.ipynb
+```
+
+For monthly forward collection, update the local current-season workbook under `data/holdout/`, set `DUNE_API_KEY` in the process environment, and run:
+
+```bash
+jupyter notebook notebooks/03_forward_polymarket_data_collection.ipynb
+```
+
+After finalized monthly files exist, run the offline forward execution report:
+
+```bash
+jupyter notebook notebooks/04_forward_polymarket_execution.ipynb
+```
+
+The API key and generated workbook/CSV data must remain local and are excluded by `.gitignore`.
 
 ## Reproducibility
 
@@ -172,7 +212,7 @@ The project should be read as a market-efficiency and price-selection study, not
 
 High-value extensions would be:
 
-- validate the rule prospectively on genuinely unseen matches;
+- continue accumulating genuinely unseen 2026/27 forward observations under the frozen decision rule and execution protocol;
 - collect timestamped odds snapshots to verify simultaneous price availability;
 - add explicit commission, liquidity, and stake-limit sensitivity.
 
