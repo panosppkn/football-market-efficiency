@@ -25,3 +25,5 @@ references/private/
 # Local-only archived research notebooks
 notebooks/archive/
 notebooks/internal/
+# Local forward-test inputs and Dune outputs
+data/holdout/

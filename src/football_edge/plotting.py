@@ -895,3 +895,118 @@ def plot_kelly_diagnostics(
         figures.append(figure)
     return figures
 
+
+def plot_forward_execution_results(
+    paths: pd.DataFrame,
+    monthly_returns: pd.DataFrame,
+    *,
+    strategies: list[str],
+    title: str,
+    initial_capital_usd: float,
+    reporting_timezone: str = "Europe/London",
+    stake_roi_ylabel: str = "Monthly return on filled stake (%)",
+    bets_label: str = "executed bets",
+) -> tuple[plt.Figure, tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]:
+    """Plot bankroll path, monthly bankroll/Stake ROI, and executed bets."""
+    plot_paths = paths.loc[paths["strategy"].isin(strategies)].copy()
+    plot_monthly = monthly_returns.loc[
+        monthly_returns["strategy"].isin(strategies)
+    ].copy()
+    if plot_paths.empty or plot_monthly.empty:
+        raise ValueError(f"No results are available for {title!r}")
+
+    colors = {
+        "flat stake": "#F58518",
+        "10% Kelly": "#4C78A8",
+        "25% Kelly": "#54A24B",
+    }
+    markers = {"flat stake": "s", "10% Kelly": "o", "25% Kelly": "^"}
+    figure, (path_axis, return_axis, stake_roi_axis) = plt.subplots(
+        3, 1, figsize=(13, 12), constrained_layout=True
+    )
+
+    for strategy, group in plot_paths.groupby("strategy", sort=False):
+        group = group.sort_values("event_time_utc", kind="stable")
+        local_time = pd.to_datetime(group["event_time_utc"], utc=True).dt.tz_convert(
+            reporting_timezone
+        )
+        path_axis.plot(
+            local_time,
+            group["bankroll_usd"],
+            color=colors.get(strategy),
+            marker=markers.get(strategy, "o"),
+            linewidth=2,
+            drawstyle="steps-post",
+            label=strategy,
+        )
+    path_axis.axhline(initial_capital_usd, color="black", linewidth=0.9)
+    path_axis.set(title=f"{title}: bankroll path", ylabel="Bankroll (USD)")
+    path_axis.grid(True, alpha=0.3)
+    path_axis.legend(loc="best")
+
+    month_labels = sorted(plot_monthly["month"].unique())
+    x_positions = np.arange(len(month_labels))
+    bets_axis = return_axis.twinx()
+    count_table = plot_monthly.pivot(index="month", columns="strategy", values="bets").reindex(
+        month_labels
+    )
+    common_counts = count_table.nunique(axis=1, dropna=False).le(1).all()
+    if common_counts:
+        bets_axis.bar(
+            x_positions,
+            count_table.iloc[:, 0].fillna(0).values,
+            color="lightgray",
+            alpha=0.4,
+            label=bets_label,
+        )
+    else:
+        for strategy in strategies:
+            if strategy not in count_table:
+                continue
+            bets_axis.plot(
+                x_positions,
+                count_table[strategy].fillna(0).values,
+                color=colors.get(strategy),
+                marker=markers.get(strategy, "o"),
+                linestyle=":",
+                alpha=0.55,
+                label=f"{strategy} bets",
+            )
+    for strategy, group in plot_monthly.groupby("strategy", sort=False):
+        returns = group.set_index("month")["bankroll_return_pct"].reindex(month_labels)
+        return_axis.plot(
+            x_positions,
+            returns.values,
+            color=colors.get(strategy),
+            marker=markers.get(strategy, "o"),
+            linewidth=2,
+            label=strategy,
+        )
+        stake_roi = group.set_index("month")["stake_roi_pct"].reindex(month_labels)
+        stake_roi_axis.plot(
+            x_positions,
+            stake_roi.values,
+            color=colors.get(strategy),
+            marker=markers.get(strategy, "o"),
+            linewidth=2,
+            label=strategy,
+        )
+    return_axis.axhline(0, color="black", linewidth=0.9)
+    return_axis.set(xlabel="Month", ylabel="Monthly bankroll return (%)")
+    return_axis.set_xticks(x_positions)
+    return_axis.set_xticklabels(month_labels, rotation=35, ha="right")
+    return_axis.grid(True, alpha=0.3)
+    bets_axis.set_ylabel(bets_label.capitalize())
+    handles, labels = return_axis.get_legend_handles_labels()
+    bet_handles, bet_labels = bets_axis.get_legend_handles_labels()
+    return_axis.legend(handles + bet_handles, labels + bet_labels, loc="best")
+    stake_roi_axis.axhline(0, color="black", linewidth=0.9)
+    stake_roi_axis.set(
+        xlabel="Month",
+        ylabel=stake_roi_ylabel,
+    )
+    stake_roi_axis.set_xticks(x_positions)
+    stake_roi_axis.set_xticklabels(month_labels, rotation=35, ha="right")
+    stake_roi_axis.grid(True, alpha=0.3)
+    stake_roi_axis.legend(loc="best")
+    return figure, (path_axis, return_axis, stake_roi_axis, bets_axis)
