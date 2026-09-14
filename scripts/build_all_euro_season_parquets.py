@@ -197,7 +197,7 @@ def prepare_for_parquet(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
 
 
 
-def convert_workbook(workbook: SeasonWorkbook, output_dir: Path) -> tuple[pd.DataFrame, list[dict], list[dict]]:
+def convert_workbook(workbook: SeasonWorkbook, output_dir: Path) -> tuple[pd.DataFrame, list[dict], list[dict], list[dict]]:
     engine = excel_engine(workbook.path)
     excel = pd.ExcelFile(workbook.path, engine=engine)
     season_frames: list[pd.DataFrame] = []
