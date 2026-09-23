@@ -1,68 +1,63 @@
 # 2026/27 forward holdout
 
-> **Status:** frozen through 2025/26 · evaluated through **31 August 2026** · one completed month · no parameter re-estimation
+> **Status:** frozen through 2025/26 · evaluated from 9 August through **20 September 2026** · two forward evaluation windows · no parameter re-estimation
 
-The market-efficiency decision rule and league-specific acceptance ranges were frozen using data only through the 2025/26 season. The 2026/27 season is now being evaluated prospectively to test whether the signal remains economically positive out of sample and whether selected opportunities survive explicit execution constraints.
+The market-efficiency decision rule and league-specific acceptance ranges were frozen using data only through the 2025/26 season. The 2026/27 season is now being evaluated prospectively to test whether selected opportunities remain economically positive after explicit execution constraints.
 
-Two complementary evaluations separate the research question cleanly:
+The primary economic evaluation is the [Polymarket transaction-based execution notebook](../../notebooks/04_forward_polymarket_execution.ipynb). Football-Data and the frozen parameters determine which matches qualify and the estimated home-win probability; Polymarket supplies only the execution evidence. The evaluation then applies eligible transaction prices, buyer-side costs, historical traded-flow participation, partial fills, chronological settlement, and cash constraints.
 
-- [Notebook 02](../../notebooks/02_forward_market_maximum_benchmark.ipynb) is the **Football-Data reference-price benchmark**. It assumes full placement at `MaxH` and measures signal performance at the reference price.
-- [Notebook 04](../../notebooks/04_forward_polymarket_execution.ipynb) is the **Polymarket transaction-based execution evaluation**. It applies the same frozen signal under eligible transaction prices, modeled buyer fees, traded-flow participation, partial fills, chronological settlement, and cash constraints.
+## Current Polymarket results
 
-In short, **02 measures reference-price signal performance; 04 evaluates execution-aware performance**.
+The early transaction-based results are encouraging. Both fractional-Kelly specifications were profitable in August and September, while flat staking remains cumulatively positive after a modest negative September.
 
-## Current forward results
+The current sample contains **22 executed bets**, **15 wins**, and a **68.18% hit rate**. The executed-bet sample is identical across the three staking specifications; only capital allocation differs.
 
-The early forward results are encouraging. All three staking specifications are profitable at the Football-Data reference price, while a smaller executable subset also remains profitable under the stricter Polymarket transaction-based evaluation.
+| Strategy | Cumulative bankroll return | Stake ROI | Max drawdown | Annualized weekly volatility | Annualized weekly Sharpe |
+|---|---:|---:|---:|---:|---:|
+| flat stake | 0.68% | 4.59% | 3.16% | 7.94% | 0.67 |
+| 10% Kelly | 3.29% | 15.28% | 0.53% | 3.68% | 6.58 |
+| 25% Kelly | 5.37% | 14.26% | 1.78% | 7.89% | 4.98 |
 
-| Evaluation | Strategy | Qualifying signals | Bets evaluated / executed | Wins | Hit rate | Cumulative bankroll return | Stake ROI | Max drawdown | Annualized weekly Sharpe |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Football-Data reference price | flat stake | 22 | 22 evaluated | 17 | 77.27% | 2.67% | 12.14% | 2.28% | 3.40 |
-| Football-Data reference price | 10% Kelly | 22 | 22 evaluated | 17 | 77.27% | 0.84% | 3.13% | 3.76% | 0.68 |
-| Football-Data reference price | 25% Kelly | 22 | 22 evaluated | 17 | 77.27% | 6.08% | 10.23% | 4.95% | 2.81 |
-| Polymarket transaction-based | flat stake | 22 | 11 executed | 8 | 72.73% | 1.12% | 14.30% | 1.69% | 2.34 |
-| Polymarket transaction-based | 10% Kelly | 22 | 11 executed | 8 | 72.73% | 1.78% | 19.20% | 0.53% | 8.86 |
-| Polymarket transaction-based | 25% Kelly | 22 | 11 executed | 8 | 72.73% | 3.94% | 18.54% | 1.33% | 8.02 |
+Weekly risk statistics currently use only seven Tuesday–Monday observations and should be read as descriptive diagnostics, not mature estimates.
 
-Notebook 02 evaluates all 22 qualifying Football-Data signals at `MaxH`. Notebook 04 executes 11 bets because each signal must additionally have an eligible Polymarket transaction price and satisfy the frozen execution, participation, cash, and partial-fill rules. The two evaluations therefore do not represent identical executed samples.
+## Monthly performance
 
-Annualized Sharpe ratios currently use only four Tuesday–Monday weekly observations and should be read as descriptive diagnostics, not mature risk estimates.
+### Bankroll return
 
-## Cumulative bankroll return
+Monthly bankroll return measures the percentage change in portfolio capital during each evaluation month. The grey bars show the number of executed bets; all three strategies currently share the same executed-bet sample.
 
-The panels are deliberately separated because the reference-price benchmark and transaction-based evaluation use different opportunity sets and execution assumptions.
+![Monthly Polymarket bankroll return with executed-bet counts](figures/polymarket_monthly_bankroll_return.png)
 
-![Cumulative bankroll return for the Football-Data benchmark and Polymarket execution evaluation](figures/cumulative_bankroll_return.png)
+### Stake ROI
 
-## Stake ROI
-
-Stake ROI measures profit per dollar actually wagered:
+Monthly Stake ROI measures profit per dollar actually wagered during the month:
 
 $$
-\text{Stake ROI}=100\times\frac{\sum_i \text{profit}_i}{\sum_i \text{stake}_i}.
+\text{Stake ROI}_m=100\times\frac{\sum_{i\in m}\text{profit}_i}{\sum_{i\in m}\text{filled stake}_i}.
 $$
 
-Bankroll return measures portfolio capital growth; Stake ROI measures profitability per dollar wagered. They are complementary and should not be interpreted interchangeably. Because only one completed month is available, the current report uses a grouped full-period comparison rather than an artificial one-point monthly series.
+Bankroll return measures portfolio capital growth; Stake ROI measures profitability per dollar actually wagered. They are complementary and should not be interpreted interchangeably.
 
-![Stake ROI comparison for the Football-Data benchmark and Polymarket execution evaluation](figures/stake_roi_comparison.png)
+![Monthly Polymarket Stake ROI](figures/polymarket_monthly_stake_roi.png)
 
-## Benchmark versus execution
+Only two monthly observations are currently available, so the connecting lines should not be interpreted as an established trend. They nevertheless provide a useful first forward record: both Kelly specifications remained profitable in each observed month, and all three strategies remain profitable over the combined period. Exact calculations and cumulative bankroll paths are available in [notebook 04](../../notebooks/04_forward_polymarket_execution.ipynb).
 
-| | 02: Football-Data benchmark | 04: Polymarket execution |
-|---|---|---|
-| Signal | Frozen Football-Data rule | Same frozen rule |
-| Price | Football-Data `MaxH` | Eligible Polymarket execution price |
-| Fees | No separate fee; bookmaker margin is embedded in `MaxH` | Modeled buyer fee |
-| Full placement | Assumed | No |
-| Liquidity | Not modeled | Historical traded-flow proxy |
-| Partial fills | No | Yes |
-| Purpose | Reference-price signal benchmark | Execution-aware evaluation |
+## Reference-price context
+
+The [Football-Data reference-price benchmark](../../notebooks/02_forward_market_maximum_benchmark.ipynb) remains a useful signal diagnostic. It evaluates every qualifying completed match at `MaxH`, assumes full placement, and does not model venue availability, liquidity, or partial fills.
+
+| Evaluation window | flat stake | 10% Kelly | 25% Kelly |
+|---|---:|---:|---:|
+| August 2026 | 2.67% | 0.84% | 6.08% |
+| September 2026 | -6.05% | -3.37% | -9.91% |
+
+These figures are monthly bankroll returns. The negative September reference-price results are retained for transparency. The Polymarket evaluation uses a smaller, execution-eligible transaction sample, so divergence between the two analyses is informative but is not evidence that either venue dominates on a directly comparable set of bets.
 
 ## Interpretation
 
-The current evidence is a positive first forward indication: the frozen signal remains profitable at its Football-Data reference price, and a subset of opportunities survives the more restrictive Polymarket transaction-based framework.
+The current evidence is a positive early forward indication for the transaction-based implementation. Without re-estimating the signal, both Kelly specifications remained profitable in each reported evaluation window under the modeled execution constraints.
 
-The sample is still small. Sharpe, volatility, drawdown, and league-level comparisons are descriptive rather than mature estimates. `MaxH` is a reference-price benchmark, not proof that the price was historically executable at a specific timestamp or size. Polymarket historical traded flow is a practical execution and liquidity proxy, not proof of a hypothetical fill or future live capacity. These results do not establish future profitability.
+The sample is still small. Sharpe, volatility, drawdown, and league-level comparisons are descriptive rather than mature estimates. Polymarket historical traded flow is a practical execution and liquidity proxy, not proof of a hypothetical fill or future live capacity. These results do not establish future profitability.
 
 ## Research workflow
 
@@ -75,4 +70,4 @@ The frozen parameter snapshot is published in [`docs/parameter_snapshots`](../..
 
 ## Status and updates
 
-The current evaluation cutoff is **31 August 2026**, inclusive. The 2026/27 forward sample will accumulate as completed months are added, while the frozen signal parameters and acceptance ranges remain unchanged. Report figures can be refreshed with [`build_figures.py`](build_figures.py) after notebooks 02 and 04 have been updated from the same finalized inputs.
+The current transaction-based evaluation cutoff is **20 September 2026**, inclusive. The 2026/27 forward sample will accumulate as additional completed evaluation windows are added, while the signal parameters, acceptance ranges, and execution protocol remain frozen. The report figures can be refreshed with [`build_figures.py`](build_figures.py) after the finalized transaction files are updated.
